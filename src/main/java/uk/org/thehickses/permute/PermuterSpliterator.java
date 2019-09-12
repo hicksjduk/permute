@@ -11,8 +11,8 @@ import java.util.stream.Stream;
 
 public class PermuterSpliterator implements Spliterator<IntStream>
 {
-//    private static final Logger LOG = LoggerFactory.getLogger(PermuterSpliterator.class);
-    
+    // private static final Logger LOG = LoggerFactory.getLogger(PermuterSpliterator.class);
+
     private final int maxIndex;
     private final Deque<Deque<Integer>> indices;
 
@@ -56,8 +56,7 @@ public class PermuterSpliterator implements Spliterator<IntStream>
                     .stream()
                     .map(Deque::peekFirst)
                     .collect(Collectors.toSet());
-            Deque<Integer> nextEntry;
-            nextEntry = IntStream
+            Deque<Integer> nextEntry = IntStream
                     .range(0, maxIndex)
                     .boxed()
                     .filter(i -> !usedIndices.contains(i))
