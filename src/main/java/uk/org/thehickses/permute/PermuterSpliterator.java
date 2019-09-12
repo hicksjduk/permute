@@ -29,7 +29,6 @@ public class PermuterSpliterator implements Spliterator<IntStream>
                         .range(minIndex, maxIndex)
                         .boxed()
                         .collect(Collectors.toCollection(ArrayDeque::new)));
-        calculateNext();
     }
 
     private void calculateNext()
@@ -71,12 +70,12 @@ public class PermuterSpliterator implements Spliterator<IntStream>
         IntStream next;
         synchronized (indices)
         {
+            calculateNext();
             if (indices.isEmpty())
                 return false;
             IntStream.Builder builder = IntStream.builder();
             indices.stream().map(Deque::peekFirst).forEach(builder::add);
             next = builder.build();
-            calculateNext();
         }
         action.accept(next);
         return true;
