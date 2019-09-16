@@ -15,40 +15,74 @@ public class PermuterSpliterator implements Spliterator<IntStream>
 
     private final int maxIndex;
     private final Deque<Deque<Integer>> indices;
+    private final PartialResultValidator<IntStream> partialResultValidator;
+
+    public PermuterSpliterator(int maxIndex,
+            PartialResultValidator<IntStream> partialResultValidator)
+    {
+        this(0, maxIndex, partialResultValidator);
+    }
 
     public PermuterSpliterator(int maxIndex)
     {
-        this(0, maxIndex);
+        this(0, maxIndex, null);
     }
 
     public PermuterSpliterator(int minIndex, int maxIndex)
     {
+        this(minIndex, maxIndex, null);
+    }
+
+    public PermuterSpliterator(int minIndex, int maxIndex,
+            PartialResultValidator<IntStream> partialResultValidator)
+    {
         this.maxIndex = maxIndex;
         (indices = new ArrayDeque<>())
                 .add(IntStream
-                        .range(minIndex, maxIndex)
+                        .range(minIndex-1, maxIndex)
                         .boxed()
                         .collect(Collectors.toCollection(ArrayDeque::new)));
+        this.partialResultValidator = partialResultValidator;
     }
 
     private void calculateNext()
     {
-        if (indices.size() == maxIndex)
-        {
-            while (true)
+        while (true)
+            try
             {
-                Deque<Integer> lastQueue = indices.peekLast();
-                lastQueue.pop();
-                if (lastQueue.isEmpty())
-                {
-                    indices.removeLast();
-                    if (indices.isEmpty())
-                        return;
-                }
-                else
-                    break;
+                incrementLast();
+                if (indices.isEmpty())
+                    return;
+                fillUp();
+                break;
             }
+            catch (ValidationException ex)
+            {
+                continue;
+            }
+
+    }
+
+    private void incrementLast() throws ValidationException
+    {
+        while (true)
+        {
+            Deque<Integer> lastQueue = indices.peekLast();
+            lastQueue.pop();
+            if (lastQueue.isEmpty())
+            {
+                indices.removeLast();
+                if (indices.isEmpty())
+                    return;
+            }
+            else
+                break;
         }
+        validate();
+    }
+
+    private void fillUp() throws ValidationException
+    {
         while (indices.size() < maxIndex)
         {
             Set<Integer> usedIndices = indices
@@ -61,7 +95,14 @@ public class PermuterSpliterator implements Spliterator<IntStream>
                     .filter(i -> !usedIndices.contains(i))
                     .collect(Collectors.toCollection(ArrayDeque::new));
             indices.add(nextEntry);
+            validate();
         }
+    }
+
+    private void validate() throws ValidationException
+    {
+        if (partialResultValidator != null)
+            partialResultValidator.validate(currentIndices());
     }
 
     @Override
@@ -73,12 +114,20 @@ public class PermuterSpliterator implements Spliterator<IntStream>
             calculateNext();
             if (indices.isEmpty())
                 return false;
-            IntStream.Builder builder = IntStream.builder();
-            indices.stream().map(Deque::peekFirst).forEach(builder::add);
-            next = builder.build();
+            next = currentIndices();
         }
         action.accept(next);
         return true;
+    }
+
+    private IntStream currentIndices()
+    {
+        synchronized (indices)
+        {
+            IntStream.Builder builder = IntStream.builder();
+            indices.stream().map(Deque::peekFirst).forEach(builder::add);
+            return builder.build();
+        }
     }
 
     @Override
