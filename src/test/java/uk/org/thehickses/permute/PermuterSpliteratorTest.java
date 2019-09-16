@@ -5,10 +5,12 @@ import static org.assertj.core.api.Assertions.*;
 import java.util.ArrayDeque;
 import java.util.Deque;
 import java.util.PrimitiveIterator.OfInt;
+import java.util.concurrent.atomic.AtomicLong;
 import java.util.stream.Collectors;
 import java.util.stream.IntStream;
 import java.util.stream.Stream;
 
+import org.junit.jupiter.api.Disabled;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.Arguments;
@@ -78,7 +80,8 @@ class PermuterSpliteratorTest
                         throw new ValidationException();
             }
         };
-        PermuterSpliterator spl = new PermuterSpliterator(4, rejectIfSecondIndexTwoMoreThanTheFirst);
+        PermuterSpliterator spl = new PermuterSpliterator(4,
+                rejectIfSecondIndexTwoMoreThanTheFirst);
         Deque<Deque<Integer>> expected = dequeOfDeques("0123", "0132", "0312", "0321", "1023",
                 "1032", "1203", "1230", "2013", "2031", "2103", "2130", "2301", "2310", "3012",
                 "3021", "3102", "3120", "3201", "3210");
@@ -99,9 +102,26 @@ class PermuterSpliteratorTest
                 last = value;
             }
         };
-        PermuterSpliterator spl = new PermuterSpliterator(4, rejectIfAnyIndexOneMoreThanThePrevious);
+        PermuterSpliterator spl = new PermuterSpliterator(4,
+                rejectIfAnyIndexOneMoreThanThePrevious);
         Deque<Deque<Integer>> expected = dequeOfDeques("0213", "0321", "1032", "1302", "1320",
                 "2031", "2103", "2130", "3021", "3102", "3210");
         checkResults(spl, expected);
+    }
+
+    @Disabled("Until I work out how to make the method work properly")
+    void testEstimateSize()
+    {
+        int maxIndex = 5;
+        PermuterSpliterator spl = new PermuterSpliterator(maxIndex);
+        AtomicLong maxSize = new AtomicLong(IntStream
+                .rangeClosed(2, maxIndex)
+                .mapToLong(i -> i)
+                .reduce((a, b) -> a * b)
+                .getAsLong());
+        spl
+                .forEachRemaining(comb -> assertThat(spl.estimateSize())
+                        .isEqualTo(maxSize.getAndDecrement()));
+        assertThat(maxSize).isEqualTo(0);
     }
 }

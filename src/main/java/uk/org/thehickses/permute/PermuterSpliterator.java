@@ -2,10 +2,12 @@ package uk.org.thehickses.permute;
 
 import java.util.ArrayDeque;
 import java.util.Deque;
+import java.util.Iterator;
 import java.util.Set;
 import java.util.Spliterator;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.function.Consumer;
+import java.util.function.LongBinaryOperator;
 import java.util.stream.Collectors;
 import java.util.stream.IntStream;
 import java.util.stream.Stream;
@@ -18,6 +20,18 @@ public class PermuterSpliterator implements Spliterator<IntStream>
     private final Deque<Deque<Integer>> indices;
     private final PartialResultValidator<IntStream> partialResultValidator;
     private final AtomicBoolean startedIteration = new AtomicBoolean();
+
+    private static LongBinaryOperator increaserWithMaximum(LongBinaryOperator increaser,
+            LongBinaryOperator inverse, long maximum)
+    {
+        return (a, b) -> a == maximum || b == maximum ? maximum
+                : inverse.applyAsLong(maximum, a) < b ? maximum : increaser.applyAsLong(a, b);
+    }
+
+    private static final LongBinaryOperator ADDER = increaserWithMaximum((a, b) -> a + b,
+            (a, b) -> a - b, Long.MAX_VALUE);
+    private static final LongBinaryOperator MULTIPLIER = increaserWithMaximum((a, b) -> a * b,
+            (a, b) -> a / b, Long.MAX_VALUE);
 
     public PermuterSpliterator(int maxIndex,
             PartialResultValidator<IntStream> partialResultValidator)
@@ -162,6 +176,40 @@ public class PermuterSpliterator implements Spliterator<IntStream>
     public long estimateSize()
     {
         return Long.MAX_VALUE;
+    }
+
+    public long fineEstimateSize()
+    {
+        int[] queueSizes;
+        synchronized (indices)
+        {
+            if (indices.isEmpty())
+                return 0;
+            Iterator<Deque<Integer>> it = indices.iterator();
+            queueSizes = IntStream
+                    .range(0, maxIndex)
+                    .map(i -> it.hasNext() ? it.next().size() : maxIndex - i)
+                    .toArray();
+        }
+        int firstMoreThan1 = IntStream
+                .range(0, queueSizes.length)
+                .filter(i -> queueSizes[i] > 1)
+                .findFirst()
+                .orElse(-1);
+        if (firstMoreThan1 == -1)
+            return 1;
+        long leftForTheFirstEntry = IntStream
+                .range(firstMoreThan1 + 1, maxIndex)
+                .mapToLong(i -> queueSizes[i])
+                .reduce(MULTIPLIER)
+                .getAsLong();
+        long leftForTheRest = IntStream
+                .concat(IntStream.of(queueSizes[firstMoreThan1] - 1),
+                        IntStream.rangeClosed(2, maxIndex - firstMoreThan1 - 1))
+                .mapToLong(i -> i)
+                .reduce(MULTIPLIER)
+                .getAsLong();
+        return ADDER.applyAsLong(leftForTheFirstEntry, leftForTheRest);
     }
 
     @Override
