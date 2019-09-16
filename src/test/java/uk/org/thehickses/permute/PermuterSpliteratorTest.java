@@ -68,8 +68,7 @@ class PermuterSpliteratorTest
     @Test
     void testWithValidator1()
     {
-        // This validator rejects all combinations where the second index is 2 more than the first.
-        PermuterSpliterator spl = new PermuterSpliterator(4, str -> {
+        PartialResultValidator<IntStream> rejectIfSecondIndexTwoMoreThanTheFirst = str -> {
             OfInt it = str.limit(2).iterator();
             if (it.hasNext())
             {
@@ -78,7 +77,8 @@ class PermuterSpliteratorTest
                     if (first - it.next() == -2)
                         throw new ValidationException();
             }
-        });
+        };
+        PermuterSpliterator spl = new PermuterSpliterator(4, rejectIfSecondIndexTwoMoreThanTheFirst);
         Deque<Deque<Integer>> expected = dequeOfDeques("0123", "0132", "0312", "0321", "1023",
                 "1032", "1203", "1230", "2013", "2031", "2103", "2130", "2301", "2310", "3012",
                 "3021", "3102", "3120", "3201", "3210");
@@ -88,8 +88,7 @@ class PermuterSpliteratorTest
     @Test
     void testWithValidator2()
     {
-        // This validator rejects all combinations where any index is 1 more than the previous one.
-        PermuterSpliterator spl = new PermuterSpliterator(4, str -> {
+        PartialResultValidator<IntStream> rejectIfAnyIndexOneMoreThanThePrevious = str -> {
             OfInt it = str.iterator();
             int last = Integer.MIN_VALUE;
             while (it.hasNext())
@@ -99,7 +98,8 @@ class PermuterSpliteratorTest
                     throw new ValidationException();
                 last = value;
             }
-        });
+        };
+        PermuterSpliterator spl = new PermuterSpliterator(4, rejectIfAnyIndexOneMoreThanThePrevious);
         Deque<Deque<Integer>> expected = dequeOfDeques("0213", "0321", "1032", "1302", "1320",
                 "2031", "2103", "2130", "3021", "3102", "3210");
         checkResults(spl, expected);
