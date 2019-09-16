@@ -44,12 +44,7 @@ public class PermuterSpliterator implements Spliterator<IntStream>
         this(0, maxIndex, null);
     }
 
-    public PermuterSpliterator(int minIndex, int maxIndex)
-    {
-        this(minIndex, maxIndex, null);
-    }
-
-    public PermuterSpliterator(int minIndex, int maxIndex,
+    private PermuterSpliterator(int minIndex, int maxIndex,
             PartialResultValidator<IntStream> partialResultValidator)
     {
         this.maxIndex = maxIndex;
