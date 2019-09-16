@@ -150,7 +150,8 @@ public class PermuterSpliterator implements Spliterator<IntStream>
                                 .range(currentStart, currentStart + 1)
                                 .boxed()
                                 .collect(Collectors.toCollection(ArrayDeque::new)));
-                PermuterSpliterator answer = new PermuterSpliterator(currentStart + 1, maxIndex);
+                PermuterSpliterator answer = new PermuterSpliterator(currentStart + 1, maxIndex,
+                        partialResultValidator);
                 return answer;
             }
         }
