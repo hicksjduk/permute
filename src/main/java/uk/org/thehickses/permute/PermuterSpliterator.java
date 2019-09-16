@@ -4,6 +4,7 @@ import java.util.ArrayDeque;
 import java.util.Deque;
 import java.util.Set;
 import java.util.Spliterator;
+import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.function.Consumer;
 import java.util.stream.Collectors;
 import java.util.stream.IntStream;
@@ -16,6 +17,7 @@ public class PermuterSpliterator implements Spliterator<IntStream>
     private final int maxIndex;
     private final Deque<Deque<Integer>> indices;
     private final PartialResultValidator<IntStream> partialResultValidator;
+    private final AtomicBoolean startedIteration = new AtomicBoolean();
 
     public PermuterSpliterator(int maxIndex,
             PartialResultValidator<IntStream> partialResultValidator)
@@ -39,7 +41,7 @@ public class PermuterSpliterator implements Spliterator<IntStream>
         this.maxIndex = maxIndex;
         (indices = new ArrayDeque<>())
                 .add(IntStream
-                        .range(minIndex-1, maxIndex)
+                        .range(minIndex, maxIndex)
                         .boxed()
                         .collect(Collectors.toCollection(ArrayDeque::new)));
         this.partialResultValidator = partialResultValidator;
@@ -50,9 +52,12 @@ public class PermuterSpliterator implements Spliterator<IntStream>
         while (true)
             try
             {
-                incrementLast();
-                if (indices.isEmpty())
-                    return;
+                if (startedIteration.getAndSet(true))
+                {
+                    incrementLast();
+                    if (indices.isEmpty())
+                        return;
+                }
                 fillUp();
                 break;
             }
