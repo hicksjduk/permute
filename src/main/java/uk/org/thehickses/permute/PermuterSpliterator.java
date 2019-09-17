@@ -19,7 +19,6 @@ public class PermuterSpliterator implements Spliterator<IntStream>
     private final int maxIndex;
     private final Deque<Deque<Integer>> indices;
     private final PartialResultValidator<IntStream> partialResultValidator;
-    private final AtomicBoolean startedIteration = new AtomicBoolean();
 
     private static LongBinaryOperator increaserWithMaximum(LongBinaryOperator increaser,
             LongBinaryOperator inverse, long maximum)
@@ -54,6 +53,17 @@ public class PermuterSpliterator implements Spliterator<IntStream>
                         .boxed()
                         .collect(Collectors.toCollection(ArrayDeque::new)));
         this.partialResultValidator = partialResultValidator;
+        while (!indices.isEmpty())
+            try
+            {
+                validate();
+                fillUp();
+                break;
+            }
+            catch (ValidationException ex)
+            {
+                calculateNext();
+            }
     }
 
     private void calculateNext()
@@ -61,12 +71,9 @@ public class PermuterSpliterator implements Spliterator<IntStream>
         while (true)
             try
             {
-                if (startedIteration.getAndSet(true))
-                {
-                    incrementLast();
-                    if (indices.isEmpty())
-                        return;
-                }
+                incrementLast();
+                if (indices.isEmpty())
+                    return;
                 fillUp();
                 break;
             }
@@ -125,10 +132,10 @@ public class PermuterSpliterator implements Spliterator<IntStream>
         IntStream next;
         synchronized (indices)
         {
-            calculateNext();
             if (indices.isEmpty())
                 return false;
             next = currentIndices();
+            calculateNext();
         }
         action.accept(next);
         return true;
