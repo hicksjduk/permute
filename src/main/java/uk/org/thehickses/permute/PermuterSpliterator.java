@@ -31,28 +31,36 @@ public class PermuterSpliterator implements Spliterator<IntStream>
     private static final LongBinaryOperator MULTIPLIER = increaserWithMaximum((a, b) -> a * b,
             (a, b) -> a / b, Long.MAX_VALUE);
 
+    public PermuterSpliterator(int maxIndex)
+    {
+        this(0, maxIndex, null);
+    }
+
     public PermuterSpliterator(int maxIndex,
             PartialResultValidator<IntStream> partialResultValidator)
     {
         this(0, maxIndex, partialResultValidator);
     }
 
-    public PermuterSpliterator(int maxIndex)
-    {
-        this(0, maxIndex, null);
-    }
-
     private PermuterSpliterator(int minIndex, int maxIndex,
             PartialResultValidator<IntStream> partialResultValidator)
     {
+        this(maxIndex,
+                Stream
+                        .of(IntStream
+                                .range(minIndex, maxIndex)
+                                .boxed()
+                                .collect(Collectors.toCollection(ArrayDeque::new))),
+                partialResultValidator);
+    }
+
+    private PermuterSpliterator(int maxIndex, Stream<Deque<Integer>> indices,
+            PartialResultValidator<IntStream> partialResultValidator)
+    {
         this.maxIndex = maxIndex;
-        (indices = new ArrayDeque<>())
-                .add(IntStream
-                        .range(minIndex, maxIndex)
-                        .boxed()
-                        .collect(Collectors.toCollection(ArrayDeque::new)));
+        this.indices = indices.collect(Collectors.toCollection(ArrayDeque::new));
         this.partialResultValidator = partialResultValidator;
-        while (!indices.isEmpty())
+        while (!this.indices.isEmpty())
             try
             {
                 validate();
