@@ -34,7 +34,7 @@ class PermuterTest
     @Test
     void testWithValidator()
     {
-        PartialResultValidator<Stream<String>> rejectIfIncludesBImmediatelyFollowedByC = str -> {
+        PartialResultValidator<String> rejectIfIncludesBImmediatelyFollowedByC = str -> {
             String string = str.collect(Collectors.joining());
             boolean invalid = string.indexOf("bc") != -1;
             if (invalid)
@@ -65,7 +65,7 @@ class PermuterTest
     @Test
     void testWithInputStreamAndValidator()
     {
-        PartialResultValidator<Stream<String>> validator = comb -> {
+        PartialResultValidator<String> validator = comb -> {
             if (comb.findFirst().get().equals("a"))
                 throw new ValidationException();
         };
@@ -82,7 +82,7 @@ class PermuterTest
     @Test
     void testWithInputCollectionAndValidator()
     {
-        PartialResultValidator<Stream<String>> validator = comb -> {
+        PartialResultValidator<String> validator = comb -> {
             String firstElement = comb.findFirst().get();
             if (Stream.of("a", "b").anyMatch(firstElement::equals))
                 throw new ValidationException();

@@ -7,7 +7,6 @@ import java.util.Deque;
 import java.util.PrimitiveIterator.OfInt;
 import java.util.concurrent.atomic.AtomicLong;
 import java.util.stream.Collectors;
-import java.util.stream.IntStream;
 import java.util.stream.LongStream;
 import java.util.stream.Stream;
 
@@ -70,7 +69,7 @@ class PermuterSpliteratorTest
     @Test
     void testWithValidator1()
     {
-        PartialResultValidator<IntStream> rejectIfSecondIndexTwoMoreThanTheFirst = str -> {
+        IntPartialResultValidator rejectIfSecondIndexTwoMoreThanTheFirst = str -> {
             OfInt it = str.limit(2).iterator();
             if (it.hasNext())
             {
@@ -91,7 +90,7 @@ class PermuterSpliteratorTest
     @Test
     void testWithValidator2()
     {
-        PartialResultValidator<IntStream> rejectIfAnyIndexOneMoreThanThePrevious = str -> {
+        IntPartialResultValidator rejectIfAnyIndexOneMoreThanThePrevious = str -> {
             OfInt it = str.iterator();
             int last = Integer.MIN_VALUE;
             while (it.hasNext())

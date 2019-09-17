@@ -19,7 +19,7 @@ public class PermuterSpliterator implements Spliterator<IntStream>
 
     private final int maxIndex;
     private final Deque<Deque<Integer>> indices;
-    private final PartialResultValidator<IntStream> partialResultValidator;
+    private final IntPartialResultValidator partialResultValidator;
 
     private static ToLongBiFunction<Long, LongSupplier> increaserWithMaximum(
             LongBinaryOperator increaser, LongBinaryOperator inverse, long maximum)
@@ -55,13 +55,13 @@ public class PermuterSpliterator implements Spliterator<IntStream>
     }
 
     public PermuterSpliterator(int maxIndex,
-            PartialResultValidator<IntStream> partialResultValidator)
+            IntPartialResultValidator partialResultValidator)
     {
         this(0, maxIndex, partialResultValidator);
     }
 
     private PermuterSpliterator(int minIndex, int maxIndex,
-            PartialResultValidator<IntStream> partialResultValidator)
+            IntPartialResultValidator partialResultValidator)
     {
         this(maxIndex,
                 Stream
@@ -73,7 +73,7 @@ public class PermuterSpliterator implements Spliterator<IntStream>
     }
 
     private PermuterSpliterator(int maxIndex, Stream<Deque<Integer>> indices,
-            PartialResultValidator<IntStream> partialResultValidator)
+            IntPartialResultValidator partialResultValidator)
     {
         this.maxIndex = maxIndex;
         this.indices = maxIndex == 0 ? new ArrayDeque<>()

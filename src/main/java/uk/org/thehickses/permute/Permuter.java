@@ -8,7 +8,7 @@ import java.util.stream.StreamSupport;
 public class Permuter<T>
 {
     private final T[] items;
-    private final PartialResultValidator<Stream<T>> partialResultValidator;
+    private final PartialResultValidator<T> partialResultValidator;
 
     @SafeVarargs
     public Permuter(T... items)
@@ -17,7 +17,7 @@ public class Permuter<T>
     }
 
     @SafeVarargs
-    public Permuter(PartialResultValidator<Stream<T>> partialResultValidator, T... items)
+    public Permuter(PartialResultValidator<T> partialResultValidator, T... items)
     {
         this.items = items;
         this.partialResultValidator = partialResultValidator;
@@ -30,7 +30,7 @@ public class Permuter<T>
     }
 
     @SuppressWarnings("unchecked")
-    public Permuter(PartialResultValidator<Stream<T>> partialResultValidator, Stream<T> items)
+    public Permuter(PartialResultValidator<T> partialResultValidator, Stream<T> items)
     {
         this(partialResultValidator, (T[]) items.toArray());
     }
@@ -40,14 +40,14 @@ public class Permuter<T>
         this(null, items.stream());
     }
 
-    public Permuter(PartialResultValidator<Stream<T>> partialResultValidator, Collection<T> items)
+    public Permuter(PartialResultValidator<T> partialResultValidator, Collection<T> items)
     {
         this(partialResultValidator, items.stream());
     }
 
     public Stream<Stream<T>> permute()
     {
-        PartialResultValidator<IntStream> validator = partialResultValidator == null ? null
+        IntPartialResultValidator validator = partialResultValidator == null ? null
                 : str -> partialResultValidator.validate(objectsAtIndices(str));
         return StreamSupport
                 .stream(new PermuterSpliterator(items.length, validator), true)

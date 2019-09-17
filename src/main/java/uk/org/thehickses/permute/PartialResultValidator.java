@@ -1,7 +1,9 @@
 package uk.org.thehickses.permute;
 
+import java.util.stream.Stream;
+
 @FunctionalInterface
 public interface PartialResultValidator<T>
 {
-    void validate(T result) throws ValidationException;
+    void validate(Stream<T> result) throws ValidationException;
 }
