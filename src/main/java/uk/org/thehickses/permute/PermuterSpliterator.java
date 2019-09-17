@@ -96,25 +96,20 @@ public class PermuterSpliterator implements Spliterator<IntStream>
 
     private void incrementLast() throws ValidationException
     {
-        while (true)
+        while (!indices.isEmpty())
         {
             Deque<Integer> lastQueue = indices.peekLast();
             lastQueue.pop();
-            if (lastQueue.isEmpty())
-            {
-                indices.removeLast();
-                if (indices.isEmpty())
-                    return;
-            }
-            else
+            if (!lastQueue.isEmpty())
                 break;
+            indices.removeLast();
         }
         validate();
     }
 
     private void fillUp() throws ValidationException
     {
-        while (indices.size() < maxIndex)
+        for (int s = indices.size(); s < maxIndex; s++)
         {
             Set<Integer> usedIndices = indices
                     .stream()
