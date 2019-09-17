@@ -10,6 +10,7 @@ import java.util.function.LongSupplier;
 import java.util.function.ToLongBiFunction;
 import java.util.stream.Collectors;
 import java.util.stream.IntStream;
+import java.util.stream.LongStream;
 import java.util.stream.Stream;
 
 public class PermuterSpliterator implements Spliterator<IntStream>
@@ -75,7 +76,8 @@ public class PermuterSpliterator implements Spliterator<IntStream>
             PartialResultValidator<IntStream> partialResultValidator)
     {
         this.maxIndex = maxIndex;
-        this.indices = indices.collect(Collectors.toCollection(ArrayDeque::new));
+        this.indices = maxIndex == 0 ? new ArrayDeque<>()
+                : indices.collect(Collectors.toCollection(ArrayDeque::new));
         this.partialResultValidator = partialResultValidator;
         boolean alreadyValidated = false;
         while (!this.indices.isEmpty())
@@ -113,31 +115,34 @@ public class PermuterSpliterator implements Spliterator<IntStream>
 
     private void incrementLast() throws ValidationException
     {
-        while (!indices.isEmpty())
+        while (true)
         {
             Deque<Integer> lastQueue = indices.peekLast();
             lastQueue.pop();
             if (!lastQueue.isEmpty())
                 break;
             indices.removeLast();
+            if (indices.isEmpty())
+                return;
         }
         validate();
     }
 
     private void fillUp() throws ValidationException
     {
+        Set<Integer> usedIndices = indices
+                .stream()
+                .map(Deque::peekFirst)
+                .collect(Collectors.toSet());
         for (int s = indices.size(); s < maxIndex; s++)
         {
-            Set<Integer> usedIndices = indices
-                    .stream()
-                    .map(Deque::peekFirst)
-                    .collect(Collectors.toSet());
             Deque<Integer> nextEntry = IntStream
                     .range(0, maxIndex)
                     .boxed()
                     .filter(i -> !usedIndices.contains(i))
                     .collect(Collectors.toCollection(ArrayDeque::new));
             indices.add(nextEntry);
+            usedIndices.add(nextEntry.peekFirst());
             validate();
         }
     }
@@ -151,49 +156,47 @@ public class PermuterSpliterator implements Spliterator<IntStream>
     @Override
     public boolean tryAdvance(Consumer<? super IntStream> action)
     {
-        IntStream next;
+        IntStream current;
         synchronized (indices)
         {
             if (indices.isEmpty())
                 return false;
-            next = currentIndices();
+            current = currentIndices();
             calculateNext();
         }
-        action.accept(next);
+        action.accept(current);
         return true;
     }
 
     private IntStream currentIndices()
     {
+        IntStream.Builder builder = IntStream.builder();
         synchronized (indices)
         {
-            IntStream.Builder builder = IntStream.builder();
             indices.stream().map(Deque::peekFirst).forEach(builder::add);
-            return builder.build();
         }
+        return builder.build();
     }
 
     @Override
     public Spliterator<IntStream> trySplit()
     {
+        Integer currentStart = null;
         synchronized (indices)
         {
             Deque<Integer> firstIndices = indices.peekFirst();
             if (firstIndices.size() > 1)
             {
-                Integer currentStart = firstIndices.peekFirst();
+                currentStart = firstIndices.peekFirst();
                 indices.removeFirst();
                 indices
-                        .push(IntStream
+                        .push(Stream
                                 .of(currentStart)
-                                .boxed()
                                 .collect(Collectors.toCollection(ArrayDeque::new)));
-                PermuterSpliterator answer = new PermuterSpliterator(currentStart + 1, maxIndex,
-                        partialResultValidator);
-                return answer;
             }
         }
-        return null;
+        return currentStart == null ? null
+                : new PermuterSpliterator(currentStart + 1, maxIndex, partialResultValidator);
     }
 
     @Override
@@ -217,13 +220,8 @@ public class PermuterSpliterator implements Spliterator<IntStream>
             return queueSizes[startIndex];
         long answer = estimateSize(startIndex + 1, queueSizes);
         if (queueSizes[startIndex] > 1)
-            answer = add(answer,
-                    () -> IntStream
-                            .concat(IntStream.of(queueSizes[startIndex] - 1),
-                                    IntStream.range(2, maxIndex - startIndex))
-                            .mapToLong(i -> i)
-                            .reduce(this::multiply)
-                            .getAsLong());
+            answer = add(answer, () -> multiply(queueSizes[startIndex] - 1,
+                    LongStream.range(2, maxIndex - startIndex).reduce(this::multiply).orElse(1)));
         return answer;
     }
 

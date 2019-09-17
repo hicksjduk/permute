@@ -5,27 +5,29 @@ import static org.assertj.core.api.Assertions.*;
 import java.util.Iterator;
 import java.util.TreeSet;
 import java.util.stream.Collectors;
+import java.util.stream.IntStream;
 import java.util.stream.LongStream;
 import java.util.stream.Stream;
 
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.ValueSource;
 
 class PermuterTest
 {
-    @Test
-    void test5()
+    @ParameterizedTest
+    @ValueSource(ints = { 0, 1, 2, 5, 10 })
+    void testLength(int valueCount)
     {
-        assertThat(new Permuter<>("a", "b", "c", "d", "e").permute().count())
-                .isEqualTo(LongStream.rangeClosed(1, 5).reduce((a, b) -> a * b).getAsLong());
-    }
-
-    @Test
-    void test10()
-    {
-        assertThat(
-                new Permuter<>("a", "b", "c", "d", "e", "f", "g", "h", "i", "j").permute().count())
-                        .isEqualTo(
-                                LongStream.rangeClosed(1, 10).reduce((a, b) -> a * b).getAsLong());
+        String[] values = IntStream
+                .range('a', 'a' + valueCount)
+                .mapToObj(i -> "" + (char) i)
+                .toArray(String[]::new);
+        long expectedCount = LongStream
+                .rangeClosed(1, valueCount)
+                .reduce((a, b) -> a * b)
+                .orElse(0);
+        assertThat(new Permuter<>(values).permute().count()).isEqualTo(expectedCount);
     }
 
     @Test
@@ -47,7 +49,6 @@ class PermuterTest
                 .map(comb -> comb.collect(Collectors.joining()))
                 .collect(Collectors.toCollection(TreeSet::new))
                 .stream()
-                .peek(System.out::println)
                 .forEach(str -> assertThat(str).isEqualTo(expected.next()));
         assertThat(expected.hasNext())
                 .describedAs("Not enough results, there are expected results left")

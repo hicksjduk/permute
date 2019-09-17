@@ -8,6 +8,7 @@ import java.util.PrimitiveIterator.OfInt;
 import java.util.concurrent.atomic.AtomicLong;
 import java.util.stream.Collectors;
 import java.util.stream.IntStream;
+import java.util.stream.LongStream;
 import java.util.stream.Stream;
 
 import org.junit.jupiter.api.Test;
@@ -37,9 +38,9 @@ class PermuterSpliteratorTest
     {
         return Stream
                 .of(expectedResults)
-                .map(str -> IntStream
-                        .range(0, str.length())
-                        .mapToObj(i -> str.substring(i, i + 1))
+                .map(str -> str
+                        .chars()
+                        .mapToObj(i -> "" + (char) i)
                         .map(Integer::parseInt)
                         .collect(Collectors.toCollection(ArrayDeque::new)))
                 .collect(Collectors.toCollection(ArrayDeque::new));
@@ -113,11 +114,8 @@ class PermuterSpliteratorTest
     {
         int maxIndex = 5;
         PermuterSpliterator spl = new PermuterSpliterator(maxIndex);
-        AtomicLong maxSize = new AtomicLong(IntStream
-                .rangeClosed(2, maxIndex)
-                .mapToLong(i -> i)
-                .reduce((a, b) -> a * b)
-                .getAsLong());
+        AtomicLong maxSize = new AtomicLong(
+                LongStream.rangeClosed(2, maxIndex).reduce((a, b) -> a * b).getAsLong());
         assertThat(spl.estimateSize()).isEqualTo(maxSize.get());
         spl
                 .forEachRemaining(
