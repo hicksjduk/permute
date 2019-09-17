@@ -40,15 +40,14 @@ class PermuterTest
         Iterator<String> expected = Stream
                 .of("abdc", "acbd", "acdb", "adcb", "bacd", "badc", "bdac", "bdca", "cabd", "cadb",
                         "cbad", "cbda", "cdab", "cdba", "dacb", "dbac", "dcab", "dcba")
-                .collect(Collectors.toCollection(TreeSet::new))
-                // .sorted()
+                .sorted()
                 .iterator();
         new Permuter<>(rejectIfIncludesBImmediatelyFollowedByC, "a", "b", "c", "d")
                 .permute()
                 .map(comb -> comb.collect(Collectors.joining()))
                 .collect(Collectors.toCollection(TreeSet::new))
                 .stream()
-                // .sorted()
+                .peek(System.out::println)
                 .forEach(str -> assertThat(str).isEqualTo(expected.next()));
         assertThat(expected.hasNext())
                 .describedAs("Not enough results, there are expected results left")

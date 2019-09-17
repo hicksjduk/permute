@@ -211,7 +211,7 @@ public class PermuterSpliterator implements Spliterator<IntStream>
                     .map(i -> it.hasNext() ? it.next().size() : maxIndex - i)
                     .toArray();
         }
-        return estimateSize(0, queueSizes); 
+        return estimateSize(0, queueSizes);
     }
 
     private long estimateSize(int startIndex, int[] queueSizes)
