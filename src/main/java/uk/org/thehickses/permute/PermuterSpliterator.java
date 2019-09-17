@@ -60,16 +60,19 @@ public class PermuterSpliterator implements Spliterator<IntStream>
         this.maxIndex = maxIndex;
         this.indices = indices.collect(Collectors.toCollection(ArrayDeque::new));
         this.partialResultValidator = partialResultValidator;
+        boolean alreadyValidated = false;
         while (!this.indices.isEmpty())
             try
             {
-                validate();
+                if (!alreadyValidated)
+                    validate();
                 fillUp();
                 break;
             }
             catch (ValidationException ex)
             {
                 calculateNext();
+                alreadyValidated = true;
             }
     }
 
