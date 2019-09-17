@@ -10,7 +10,6 @@ import java.util.stream.Collectors;
 import java.util.stream.IntStream;
 import java.util.stream.Stream;
 
-import org.junit.jupiter.api.Disabled;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.Arguments;
@@ -109,7 +108,7 @@ class PermuterSpliteratorTest
         checkResults(spl, expected);
     }
 
-    @Disabled("Until I work out how to make the method work properly")
+    @Test
     void testEstimateSize()
     {
         int maxIndex = 5;
@@ -119,9 +118,17 @@ class PermuterSpliteratorTest
                 .mapToLong(i -> i)
                 .reduce((a, b) -> a * b)
                 .getAsLong());
+        assertThat(spl.estimateSize()).isEqualTo(maxSize.get());
         spl
-                .forEachRemaining(comb -> assertThat(spl.estimateSize())
-                        .isEqualTo(maxSize.getAndDecrement()));
-        assertThat(maxSize).isEqualTo(0);
+                .forEachRemaining(
+                        x -> assertThat(spl.estimateSize()).isEqualTo(maxSize.decrementAndGet()));
+        assertThat(maxSize.get() == 0);
+    }
+
+    @Test
+    void testEstimateSizeWithBigSpliterator()
+    {
+        PermuterSpliterator spl = new PermuterSpliterator(21);
+        assertThat(spl.estimateSize()).isEqualTo(Long.MAX_VALUE);
     }
 }

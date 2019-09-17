@@ -7,6 +7,8 @@ import java.util.Set;
 import java.util.Spliterator;
 import java.util.function.Consumer;
 import java.util.function.LongBinaryOperator;
+import java.util.function.LongSupplier;
+import java.util.function.ToLongBiFunction;
 import java.util.stream.Collectors;
 import java.util.stream.IntStream;
 import java.util.stream.Stream;
@@ -19,17 +21,33 @@ public class PermuterSpliterator implements Spliterator<IntStream>
     private final Deque<Deque<Integer>> indices;
     private final PartialResultValidator<IntStream> partialResultValidator;
 
-    private static LongBinaryOperator increaserWithMaximum(LongBinaryOperator increaser,
-            LongBinaryOperator inverse, long maximum)
+    private static ToLongBiFunction<Long, LongSupplier> increaserWithMaximum(
+            LongBinaryOperator increaser, LongBinaryOperator inverse, long maximum)
     {
-        return (a, b) -> a == maximum || b == maximum ? maximum
-                : inverse.applyAsLong(maximum, a) < b ? maximum : increaser.applyAsLong(a, b);
+        return (a, bGetter) -> {
+            if (a >= maximum)
+                return maximum;
+            long b = bGetter.getAsLong();
+            if (b >= maximum)
+                return maximum;
+            return inverse.applyAsLong(maximum, a) < b ? maximum : increaser.applyAsLong(a, b);
+        };
     }
 
-    private static final LongBinaryOperator ADDER = increaserWithMaximum((a, b) -> a + b,
-            (a, b) -> a - b, Long.MAX_VALUE);
-    private static final LongBinaryOperator MULTIPLIER = increaserWithMaximum((a, b) -> a * b,
-            (a, b) -> a / b, Long.MAX_VALUE);
+    private static final ToLongBiFunction<Long, LongSupplier> ADDER = increaserWithMaximum(
+            (a, b) -> a + b, (a, b) -> a - b, Long.MAX_VALUE);
+    private static final ToLongBiFunction<Long, LongSupplier> MULTIPLIER = increaserWithMaximum(
+            (a, b) -> a * b, (a, b) -> a / b, Long.MAX_VALUE);
+
+    private long add(long a, LongSupplier b)
+    {
+        return ADDER.applyAsLong(a, b);
+    }
+
+    private long multiply(long a, long b)
+    {
+        return MULTIPLIER.applyAsLong(a, () -> b);
+    }
 
     public PermuterSpliterator(int maxIndex)
     {
@@ -182,11 +200,6 @@ public class PermuterSpliterator implements Spliterator<IntStream>
     @Override
     public long estimateSize()
     {
-        return Long.MAX_VALUE;
-    }
-
-    public long fineEstimateSize()
-    {
         int[] queueSizes;
         synchronized (indices)
         {
@@ -198,25 +211,25 @@ public class PermuterSpliterator implements Spliterator<IntStream>
                     .map(i -> it.hasNext() ? it.next().size() : maxIndex - i)
                     .toArray();
         }
-        int firstMoreThan1 = IntStream
-                .range(0, queueSizes.length)
-                .filter(i -> queueSizes[i] > 1)
-                .findFirst()
-                .orElse(-1);
-        if (firstMoreThan1 == -1)
-            return 1;
-        long leftForTheFirstEntry = IntStream
-                .range(firstMoreThan1 + 1, maxIndex)
-                .mapToLong(i -> queueSizes[i])
-                .reduce(MULTIPLIER)
-                .getAsLong();
-        long leftForTheRest = IntStream
-                .concat(IntStream.of(queueSizes[firstMoreThan1] - 1),
-                        IntStream.rangeClosed(2, maxIndex - firstMoreThan1 - 1))
-                .mapToLong(i -> i)
-                .reduce(MULTIPLIER)
-                .getAsLong();
-        return ADDER.applyAsLong(leftForTheFirstEntry, leftForTheRest);
+        return estimateSize(0, queueSizes); 
+    }
+
+    private long estimateSize(int startIndex, int[] queueSizes)
+    {
+        if (queueSizes.length <= startIndex)
+            return 0;
+        if (queueSizes.length - startIndex == 1)
+            return queueSizes[startIndex];
+        long answer = estimateSize(startIndex + 1, queueSizes);
+        if (queueSizes[startIndex] > 1)
+            answer = add(answer,
+                    () -> IntStream
+                            .concat(IntStream.of(queueSizes[startIndex] - 1),
+                                    IntStream.range(2, maxIndex - startIndex))
+                            .mapToLong(i -> i)
+                            .reduce(this::multiply)
+                            .getAsLong());
+        return answer;
     }
 
     @Override
