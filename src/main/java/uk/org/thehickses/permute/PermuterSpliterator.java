@@ -2,7 +2,6 @@ package uk.org.thehickses.permute;
 
 import java.util.ArrayDeque;
 import java.util.Deque;
-import java.util.Iterator;
 import java.util.Set;
 import java.util.Spliterator;
 import java.util.function.Consumer;
@@ -205,11 +204,7 @@ public class PermuterSpliterator implements Spliterator<IntStream>
         {
             if (indices.isEmpty())
                 return 0;
-            Iterator<Deque<Integer>> it = indices.iterator();
-            queueSizes = IntStream
-                    .range(0, maxIndex)
-                    .map(i -> it.hasNext() ? it.next().size() : maxIndex - i)
-                    .toArray();
+            queueSizes = indices.stream().mapToInt(Deque::size).toArray();
         }
         return estimateSize(0, queueSizes);
     }
