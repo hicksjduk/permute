@@ -2,6 +2,7 @@ package uk.org.thehickses.permute;
 
 import static org.assertj.core.api.Assertions.*;
 
+import java.util.Arrays;
 import java.util.Iterator;
 import java.util.TreeSet;
 import java.util.stream.Collectors;
@@ -53,5 +54,40 @@ class PermuterTest
         assertThat(expected.hasNext())
                 .describedAs("Not enough results, there are expected results left")
                 .isFalse();
+    }
+
+    @Test
+    void testWithInputStream()
+    {
+        assertThat(new Permuter<>(Stream.of("a", "b", "c")).permute().count()).isEqualTo(6);
+    }
+
+    @Test
+    void testWithInputStreamAndValidator()
+    {
+        PartialResultValidator<Stream<String>> validator = comb -> {
+            if (comb.findFirst().get().equals("a"))
+                throw new ValidationException();
+        };
+        assertThat(new Permuter<>(validator, Stream.of("a", "b", "c")).permute().count())
+                .isEqualTo(4);
+    }
+
+    @Test
+    void testWithInputCollection()
+    {
+        assertThat(new Permuter<>(Arrays.asList("a", "b", "c")).permute().count()).isEqualTo(6);
+    }
+
+    @Test
+    void testWithInputCollectionAndValidator()
+    {
+        PartialResultValidator<Stream<String>> validator = comb -> {
+            String firstElement = comb.findFirst().get();
+            if (Stream.of("a", "b").anyMatch(firstElement::equals))
+                throw new ValidationException();
+        };
+        assertThat(new Permuter<>(validator, Arrays.asList("a", "b", "c")).permute().count())
+                .isEqualTo(2);
     }
 }
