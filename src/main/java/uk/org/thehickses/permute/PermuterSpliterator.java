@@ -5,7 +5,6 @@ import java.util.Deque;
 import java.util.Iterator;
 import java.util.Set;
 import java.util.Spliterator;
-import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.function.Consumer;
 import java.util.function.LongBinaryOperator;
 import java.util.stream.Collectors;
@@ -163,7 +162,7 @@ public class PermuterSpliterator implements Spliterator<IntStream>
                 indices.removeFirst();
                 indices
                         .push(IntStream
-                                .range(currentStart, currentStart + 1)
+                                .of(currentStart)
                                 .boxed()
                                 .collect(Collectors.toCollection(ArrayDeque::new)));
                 PermuterSpliterator answer = new PermuterSpliterator(currentStart + 1, maxIndex,
