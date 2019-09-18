@@ -1,6 +1,7 @@
 package uk.org.thehickses.permute;
 
 import static org.assertj.core.api.Assertions.*;
+import static org.junit.jupiter.api.Assertions.*;
 
 import java.util.ArrayDeque;
 import java.util.Deque;
@@ -127,5 +128,35 @@ class PermuterSpliteratorTest
     {
         PermuterSpliterator spl = new PermuterSpliterator(21);
         assertThat(spl.estimateSize()).isEqualTo(Long.MAX_VALUE);
+    }
+
+    @Test
+    void testToCheckpointString()
+    {
+        PermuterSpliterator spl = new PermuterSpliterator(5);
+        assertThat(spl.toCheckpointString()).isEqualTo("0,1,2,3,4/1,2,3,4/2,3,4/3,4/4");
+    }
+
+    @Test
+    void testFromCheckpointStringDataIsValid()
+    {
+        Deque<Deque<Integer>> expected = Stream
+                .of("123", "4", "70")
+                .map(String::chars)
+                .map(str -> str
+                        .mapToObj(ch -> "" + (char) ch)
+                        .map(Integer::valueOf)
+                        .collect(Collectors.toCollection(ArrayDeque::new)))
+                .collect(Collectors.toCollection(ArrayDeque::new));
+        Stream<Deque<Integer>> actual = PermuterSpliterator.fromCheckpointString("1,2,3/4/7,0");
+        actual.forEach(q -> assertThat(q).containsExactlyElementsOf(expected.pop()));
+        assertThat(expected.isEmpty()).describedAs("Should be empty").isTrue();
+    }
+
+    @Test
+    void testFromCheckpointStringDataIsInvalid()
+    {
+        assertThrows(NumberFormatException.class,
+                () -> PermuterSpliterator.fromCheckpointString("1,2,3/asda/7,0").count());
     }
 }

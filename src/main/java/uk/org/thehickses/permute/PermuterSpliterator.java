@@ -54,8 +54,7 @@ public class PermuterSpliterator implements Spliterator<IntStream>
         this(0, maxIndex, null);
     }
 
-    public PermuterSpliterator(int maxIndex,
-            IntPartialResultValidator partialResultValidator)
+    public PermuterSpliterator(int maxIndex, IntPartialResultValidator partialResultValidator)
     {
         this(0, maxIndex, partialResultValidator);
     }
@@ -240,5 +239,26 @@ public class PermuterSpliterator implements Spliterator<IntStream>
     private <T> String toString(Stream<T> str)
     {
         return "[" + str.map(Object::toString).collect(Collectors.joining(", ")) + "]";
+    }
+
+    String toCheckpointString()
+    {
+        synchronized (indices)
+        {
+            return indices
+                    .stream()
+                    .map(q -> q.stream().map(Object::toString).collect(Collectors.joining(",")))
+                    .collect(Collectors.joining("/"));
+        }
+    }
+
+    static Stream<Deque<Integer>> fromCheckpointString(String str)
+    {
+        return Stream
+                .of(str.split("/"))
+                .map(s -> Stream
+                        .of(s.split(","))
+                        .map(Integer::valueOf)
+                        .collect(Collectors.toCollection(ArrayDeque::new)));
     }
 }
