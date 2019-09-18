@@ -150,7 +150,7 @@ class PermuterSpliteratorTest
                 .collect(Collectors.toCollection(ArrayDeque::new));
         Stream<Deque<Integer>> actual = PermuterSpliterator.fromCheckpointString("1,2,3/4/7,0");
         actual.forEach(q -> assertThat(q).containsExactlyElementsOf(expected.pop()));
-        assertThat(expected.isEmpty()).describedAs("Should be empty").isTrue();
+        assertThat(expected.isEmpty()).describedAs("More expected results than actual").isTrue();
     }
 
     @Test
