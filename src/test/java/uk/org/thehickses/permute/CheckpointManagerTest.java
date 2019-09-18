@@ -6,6 +6,7 @@ import java.util.Optional;
 import java.util.concurrent.ForkJoinPool;
 import java.util.concurrent.ForkJoinTask;
 import java.util.concurrent.TimeUnit;
+import java.util.function.Function;
 import java.util.stream.Collectors;
 import java.util.stream.IntStream;
 import java.util.stream.Stream;
@@ -21,32 +22,31 @@ public class CheckpointManagerTest
     private static final int ITERATION_COUNT = 3;
     private static final int CHECKPOINTER_COUNT = 5;
 
-    private final CheckpointOutputHandler handler = mock(CheckpointOutputHandler.class);
-
     @Test
     void testNoInitStrings() throws Exception
     {
-        test(new CheckpointManager(CHECKPOINT_INTERVAL, handler), Stream.empty());
+        test(handler -> new CheckpointManager(CHECKPOINT_INTERVAL, handler), Stream.empty());
     }
 
     @Test
     void testWithInitStringsInStream() throws Exception
     {
-        test(new CheckpointManager(CHECKPOINT_INTERVAL, handler, prefixes()), prefixes());
+        test(handler -> new CheckpointManager(CHECKPOINT_INTERVAL, handler, prefixes()),
+                prefixes());
     }
 
     @Test
     void testWithInitStringsInCollection() throws Exception
     {
-        test(new CheckpointManager(CHECKPOINT_INTERVAL, handler,
+        test(handler -> new CheckpointManager(CHECKPOINT_INTERVAL, handler,
                 prefixes().limit(3).collect(Collectors.toList())), prefixes().limit(3));
     }
 
     @Test
     void testWithInitStringsInArray() throws Exception
     {
-        test(new CheckpointManager(CHECKPOINT_INTERVAL, handler, prefixes().toArray(String[]::new)),
-                prefixes());
+        test(handler -> new CheckpointManager(CHECKPOINT_INTERVAL, handler,
+                prefixes().toArray(String[]::new)), prefixes());
     }
 
     private Stream<String> prefixes()
@@ -57,8 +57,11 @@ public class CheckpointManagerTest
                 .mapToObj(i -> "" + (char) i);
     }
 
-    private void test(CheckpointManager mgr, Stream<String> expectedPrefixes) throws Exception
+    private void test(Function<CheckpointOutputHandler, CheckpointManager> mgrGetter,
+            Stream<String> expectedPrefixes) throws Exception
     {
+        CheckpointOutputHandler handler = mock(CheckpointOutputHandler.class);
+        CheckpointManager mgr = mgrGetter.apply(handler);
         String[] iPrefixes = expectedPrefixes.toArray(String[]::new);
         Stream.Builder<ForkJoinTask<?>> sb = Stream.builder();
         IntStream
