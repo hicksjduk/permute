@@ -2,6 +2,7 @@ package uk.org.thehickses.permute;
 
 import static org.assertj.core.api.Assertions.*;
 import static org.junit.jupiter.api.Assertions.*;
+import static org.mockito.Mockito.*;
 
 import java.util.ArrayDeque;
 import java.util.Deque;
@@ -10,6 +11,7 @@ import java.util.concurrent.atomic.AtomicLong;
 import java.util.stream.Collectors;
 import java.util.stream.LongStream;
 import java.util.stream.Stream;
+import java.util.stream.StreamSupport;
 
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
@@ -148,7 +150,7 @@ class PermuterSpliteratorTest
                         .map(Integer::valueOf)
                         .collect(Collectors.toCollection(ArrayDeque::new)))
                 .collect(Collectors.toCollection(ArrayDeque::new));
-        Stream<Deque<Integer>> actual = PermuterSpliterator.fromCheckpointString("1,2,3/4/7,0");
+        Deque<Deque<Integer>> actual = PermuterSpliterator.fromCheckpointString("1,2,3/4/7,0");
         actual.forEach(q -> assertThat(q).containsExactlyElementsOf(expected.pop()));
         assertThat(expected.isEmpty()).describedAs("More expected results than actual").isTrue();
     }
@@ -157,6 +159,19 @@ class PermuterSpliteratorTest
     void testFromCheckpointStringDataIsInvalid()
     {
         assertThrows(NumberFormatException.class,
-                () -> PermuterSpliterator.fromCheckpointString("1,2,3/asda/7,0").count());
+                () -> PermuterSpliterator.fromCheckpointString("1,2,3/asda/7,0"));
+    }
+
+    @Test
+    void testWithCheckpointingNoInitStrings()
+    {
+        CheckpointManager mgr = mock(CheckpointManager.class);
+        when(mgr.register()).thenReturn(mgr.new Checkpointer(0, null));
+        PermuterSpliterator spl = new PermuterSpliterator(3, mgr);
+        verify(mgr).register();
+        assertThat(StreamSupport.stream(spl, false).count()).isEqualTo(6);
+        Stream
+                .of("0,1,2/2/1", "1,2/0,2/2", "1,2/2/0", "2/0,1/1", "2/1/0")
+                .forEach(exp -> verify(mgr).checkpoint(0, exp));
     }
 }

@@ -84,7 +84,7 @@ public class CheckpointManager
         return new Checkpointer(id, initString);
     }
 
-    private void deregister(int id)
+    void deregister(int id)
     {
         synchronized (currentCheckpoints)
         {
@@ -92,7 +92,7 @@ public class CheckpointManager
         }
     }
 
-    private void checkpoint(int id, String cpString)
+    void checkpoint(int id, String cpString)
     {
         synchronized (currentCheckpoints)
         {
@@ -121,7 +121,7 @@ public class CheckpointManager
         private final int id;
         public final String initString;
 
-        private Checkpointer(int id, String initString)
+        Checkpointer(int id, String initString)
         {
             this.id = id;
             this.initString = initString;

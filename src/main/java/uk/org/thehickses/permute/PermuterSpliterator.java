@@ -7,11 +7,14 @@ import java.util.Spliterator;
 import java.util.function.Consumer;
 import java.util.function.LongBinaryOperator;
 import java.util.function.LongSupplier;
+import java.util.function.Supplier;
 import java.util.function.ToLongBiFunction;
 import java.util.stream.Collectors;
 import java.util.stream.IntStream;
 import java.util.stream.LongStream;
 import java.util.stream.Stream;
+
+import uk.org.thehickses.permute.CheckpointManager.Checkpointer;
 
 public class PermuterSpliterator implements Spliterator<IntStream>
 {
@@ -20,6 +23,7 @@ public class PermuterSpliterator implements Spliterator<IntStream>
     private final int maxIndex;
     private final Deque<Deque<Integer>> indices;
     private final IntPartialResultValidator partialResultValidator;
+    private final Checkpointer checkpointer;
 
     private static ToLongBiFunction<Long, LongSupplier> increaserWithMaximum(
             LongBinaryOperator increaser, LongBinaryOperator inverse, long maximum)
@@ -51,32 +55,48 @@ public class PermuterSpliterator implements Spliterator<IntStream>
 
     public PermuterSpliterator(int maxIndex)
     {
-        this(0, maxIndex, null);
+        this(0, maxIndex, null, null);
+    }
+
+    public PermuterSpliterator(int maxIndex, CheckpointManager checkpointManager)
+    {
+        this(0, maxIndex, null, checkpointManager);
     }
 
     public PermuterSpliterator(int maxIndex, IntPartialResultValidator partialResultValidator)
     {
-        this(0, maxIndex, partialResultValidator);
+        this(0, maxIndex, partialResultValidator, null);
+    }
+
+    public PermuterSpliterator(int maxIndex, IntPartialResultValidator partialResultValidator,
+            CheckpointManager checkpointManager)
+    {
+        this(0, maxIndex, partialResultValidator, checkpointManager);
     }
 
     private PermuterSpliterator(int minIndex, int maxIndex,
-            IntPartialResultValidator partialResultValidator)
+            IntPartialResultValidator partialResultValidator, CheckpointManager checkpointManager)
     {
         this(maxIndex,
-                Stream
+                () -> Stream
                         .of(IntStream
                                 .range(minIndex, maxIndex)
                                 .boxed()
                                 .collect(Collectors.toCollection(ArrayDeque::new))),
-                partialResultValidator);
+                partialResultValidator,
+                checkpointManager == null ? null : checkpointManager.register());
     }
 
-    private PermuterSpliterator(int maxIndex, Stream<Deque<Integer>> indices,
-            IntPartialResultValidator partialResultValidator)
+    private PermuterSpliterator(int maxIndex, Supplier<Stream<Deque<Integer>>> indicesSupplier,
+            IntPartialResultValidator partialResultValidator, Checkpointer checkpointer)
     {
         this.maxIndex = maxIndex;
-        this.indices = maxIndex == 0 ? new ArrayDeque<>()
-                : indices.collect(Collectors.toCollection(ArrayDeque::new));
+        this.checkpointer = checkpointer;
+        if (checkpointer != null && checkpointer.initString != null)
+            this.indices = fromCheckpointString(checkpointer.initString);
+        else
+            this.indices = maxIndex == 0 ? new ArrayDeque<>()
+                    : indicesSupplier.get().collect(Collectors.toCollection(ArrayDeque::new));
         this.partialResultValidator = partialResultValidator;
         boolean alreadyValidated = false;
         while (!this.indices.isEmpty())
@@ -156,14 +176,23 @@ public class PermuterSpliterator implements Spliterator<IntStream>
     public boolean tryAdvance(Consumer<? super IntStream> action)
     {
         IntStream current;
+        String cpString = null;
         synchronized (indices)
         {
             if (indices.isEmpty())
+            {
+                if (checkpointer != null)
+                    checkpointer.deregister();
                 return false;
+            }
             current = currentIndices();
             calculateNext();
+            if (checkpointer != null)
+                cpString = toCheckpointString();
         }
         action.accept(current);
+        if (cpString != null)
+            checkpointer.checkpoint(cpString);
         return true;
     }
 
@@ -195,7 +224,8 @@ public class PermuterSpliterator implements Spliterator<IntStream>
             }
         }
         return currentStart == null ? null
-                : new PermuterSpliterator(currentStart + 1, maxIndex, partialResultValidator);
+                : new PermuterSpliterator(currentStart + 1, maxIndex, partialResultValidator,
+                        checkpointer == null ? null : checkpointer.manager());
     }
 
     @Override
@@ -252,13 +282,14 @@ public class PermuterSpliterator implements Spliterator<IntStream>
         }
     }
 
-    static Stream<Deque<Integer>> fromCheckpointString(String str)
+    static Deque<Deque<Integer>> fromCheckpointString(String str)
     {
         return Stream
                 .of(str.split("/"))
                 .map(s -> Stream
                         .of(s.split(","))
                         .map(Integer::valueOf)
-                        .collect(Collectors.toCollection(ArrayDeque::new)));
+                        .collect(Collectors.toCollection(ArrayDeque::new)))
+                .collect(Collectors.toCollection(ArrayDeque::new));
     }
 }
