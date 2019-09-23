@@ -6,9 +6,12 @@ import static org.mockito.Mockito.*;
 
 import java.util.ArrayDeque;
 import java.util.Deque;
+import java.util.Iterator;
 import java.util.PrimitiveIterator.OfInt;
+import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicLong;
 import java.util.stream.Collectors;
+import java.util.stream.IntStream;
 import java.util.stream.LongStream;
 import java.util.stream.Stream;
 import java.util.stream.StreamSupport;
@@ -162,18 +165,78 @@ class PermuterSpliteratorTest
                 () -> PermuterSpliterator.fromCheckpointString("1,2,3/asda/7,0"));
     }
 
-    @Test
-    void testWithCheckpointingNoInitStrings()
+    void testWithCheckpointing(boolean parallel, int expectedSpliteratorCount,
+            Stream<String> initStrings, Stream<String> expectedCheckpoints,
+            Stream<String> expectedResults)
     {
         CheckpointManager mgr = mock(CheckpointManager.class);
-        when(mgr.register()).thenReturn(mgr.new Checkpointer(0, null));
+        AtomicInteger id = new AtomicInteger();
+        Iterator<String> inits = initStrings.iterator();
+        when(mgr.register())
+                .thenAnswer(ioc -> mgr.new Checkpointer(id.getAndIncrement(),
+                        inits.hasNext() ? inits.next() : null));
         PermuterSpliterator spl = new PermuterSpliterator(3, mgr);
-        verify(mgr).register();
-        assertThat(StreamSupport.stream(spl, false).count()).isEqualTo(6);
-        Stream
-                .of("0,1,2/2/1", "1,2/0,2/2", "1,2/2/0", "2/0,1/1", "2/1/0", "")
-                .forEach(exp -> verify(mgr).checkpoint(0, exp));
-        verify(mgr).deregister(0);
+        String[] actual = StreamSupport
+                .stream(spl, parallel)
+                .map(res -> res.mapToObj(Integer::toString).collect(Collectors.joining()))
+                .toArray(String[]::new);
+        assertThat(actual).containsExactlyInAnyOrder(expectedResults.toArray(String[]::new));
+        verify(mgr, times(expectedSpliteratorCount)).register();
+        expectedCheckpoints
+                .map(str -> str.split(":"))
+                .forEach(args -> verify(mgr)
+                        .checkpoint(Integer.parseInt(args[0]), args.length > 1 ? args[1] : ""));
+        IntStream.range(0, expectedSpliteratorCount).forEach(i -> verify(mgr).deregister(i));
         verifyNoMoreInteractions(mgr);
+    }
+
+    @Test
+    void testWithCheckpointingNoInitStringsNotParallel()
+    {
+        testWithCheckpointing(false, 1, Stream.empty(),
+                Stream
+                        .of("0,1,2/2/1", "1,2/0,2/2", "1,2/2/0", "2/0,1/1", "2/1/0", "")
+                        .map("0:"::concat),
+                Stream.of("012", "021", "102", "120", "201", "210"));
+    }
+
+    @Test
+    void testWithCheckpointingNoInitStringsParallel()
+    {
+        testWithCheckpointing(true, 3, Stream.empty(),
+                Stream.of("0:0/2/1", "0:", "1:1/2/0", "1:", "2:2/1/0", "2:"),
+                Stream.of("012", "021", "102", "120", "201", "210"));
+    }
+
+    @Test
+    void testWithCheckpointingOneInitStringNotParallel()
+    {
+        testWithCheckpointing(false, 1, Stream.of("1,2/0,2/2"),
+                Stream.of("0:1,2/2/0", "0:2/0,1/1", "0:2/1/0", "0:"),
+                Stream.of("102", "120", "201", "210"));
+    }
+
+    @Test
+    void testWithCheckpointingOneInitStringParallel()
+    {
+        testWithCheckpointing(true, 2, Stream.of("1,2/0,2/2"),
+                Stream.of("0:1/2/0", "0:", "1:2/1/0", "1:"),
+                Stream.of("102", "120", "201", "210"));
+    }
+
+    @Test
+    void testWithCheckpointingTwoInitStringsNotParallel()
+    {
+        testWithCheckpointing(false, 1, Stream.of("1,2/0,2/2", "2/1/0"),
+                Stream.of("0:1,2/2/0", "0:2/0,1/1", "0:2/1/0", "0:"),
+                Stream.of("102", "120", "201", "210"));
+    }
+
+    @Test
+    void testWithCheckpointingTwoInitStringsParallel()
+    {
+        testWithCheckpointing(true, 2, Stream.of("1,2/0,2/2", "2/1/0"),
+                Stream.of("0:1/2/0", "0:", "1:"),
+                Stream.of("102", "120", "210"));
     }
 }
