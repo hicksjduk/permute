@@ -171,7 +171,9 @@ class PermuterSpliteratorTest
         verify(mgr).register();
         assertThat(StreamSupport.stream(spl, false).count()).isEqualTo(6);
         Stream
-                .of("0,1,2/2/1", "1,2/0,2/2", "1,2/2/0", "2/0,1/1", "2/1/0")
+                .of("0,1,2/2/1", "1,2/0,2/2", "1,2/2/0", "2/0,1/1", "2/1/0", "")
                 .forEach(exp -> verify(mgr).checkpoint(0, exp));
+        verify(mgr).deregister(0);
+        verifyNoMoreInteractions(mgr);
     }
 }
