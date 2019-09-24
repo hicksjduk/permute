@@ -100,4 +100,13 @@ class PermuterTest
                 .permute(checkpointManager)
                 .count()).isEqualTo(273);
     }
+
+    @Test
+    void testWithCheckpointManagerWithNoInitStrings()
+    {
+        CheckpointManager checkpointManager = new CheckpointManager();
+        assertThat(new Permuter<>("abcdef".chars().mapToObj(ch -> "" + (char) ch))
+                .permute(checkpointManager)
+                .count()).isEqualTo(720);
+    }
 }
