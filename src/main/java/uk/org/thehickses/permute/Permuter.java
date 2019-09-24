@@ -47,10 +47,23 @@ public class Permuter<T>
 
     public Stream<Stream<T>> permute()
     {
+        return permute(null);
+    }
+
+    public Stream<Stream<T>> permute(CheckpointManager checkpointManager)
+    {
         IntPartialResultValidator validator = partialResultValidator == null ? null
                 : str -> partialResultValidator.validate(objectsAtIndices(str));
-        return StreamSupport
-                .stream(new PermuterSpliterator(items.length, validator), true)
+        int spliteratorCount = checkpointManager == null ? 1
+                : Math.max(1, checkpointManager.getInitStringCount());
+        PermuterSpliterator[] spliterators = IntStream
+                .range(0, spliteratorCount)
+                .mapToObj(i -> new PermuterSpliterator(items.length, validator, checkpointManager))
+                .toArray(PermuterSpliterator[]::new);
+        return Stream
+                .of(spliterators)
+                .parallel()
+                .flatMap(spl -> StreamSupport.stream(spl, true))
                 .map(this::objectsAtIndices);
     }
 

@@ -1,6 +1,7 @@
 package uk.org.thehickses.permute;
 
 import java.util.Collection;
+import java.util.List;
 import java.util.Objects;
 import java.util.SortedMap;
 import java.util.Timer;
@@ -20,7 +21,8 @@ public class CheckpointManager
     private final static Logger CHECKPOINT_LOGGER = LoggerFactory.getLogger("checkpoint");
 
     private final AtomicInteger idGenerator = new AtomicInteger();
-    private final SortedMap<Integer, String> currentCheckpoints;
+    private SortedMap<Integer, String> currentCheckpoints = new TreeMap<>();
+    private final List<String> initStrings;
 
     public CheckpointManager(int outputIntervalInSeconds, String... initStrings)
     {
@@ -52,10 +54,14 @@ public class CheckpointManager
     public CheckpointManager(int outputIntervalInSeconds, CheckpointOutputHandler outputHandler,
             Stream<String> initStrings)
     {
-        AtomicInteger id = new AtomicInteger();
-        this.currentCheckpoints = new TreeMap<>(
-                initStrings.collect(Collectors.toMap(str -> id.getAndIncrement(), str -> str)));
-        scheduleCheckpointTask(outputIntervalInSeconds, outputHandler);
+        this.initStrings = initStrings.collect(Collectors.toList());
+        if (outputIntervalInSeconds > 0)
+            scheduleCheckpointTask(outputIntervalInSeconds, outputHandler);
+    }
+
+    public int getInitStringCount()
+    {
+        return initStrings.size();
     }
 
     private void scheduleCheckpointTask(int outputIntervalInSeconds,
@@ -76,11 +82,7 @@ public class CheckpointManager
     public Checkpointer register()
     {
         int id = idGenerator.getAndIncrement();
-        String initString;
-        synchronized (currentCheckpoints)
-        {
-            initString = currentCheckpoints.get(id);
-        }
+        String initString = id >= initStrings.size() ? null : initStrings.get(id);
         return new Checkpointer(id, initString);
     }
 

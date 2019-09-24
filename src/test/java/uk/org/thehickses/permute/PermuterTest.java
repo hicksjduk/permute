@@ -90,4 +90,15 @@ class PermuterTest
         assertThat(new Permuter<>(validator, Arrays.asList("a", "b", "c")).permute().count())
                 .isEqualTo(2);
     }
+
+    @Test
+    void testWithCheckpointManager()
+    {
+        CheckpointManager checkpointManager = new CheckpointManager(0,
+                "0/1,2,3,4,5/2,3,4,5/3,4,5/5/4", "1/3/2/4/5/0", "2,3/3,4/0/1/5/4",
+                "4/0/1/2,3,5/3,5/5", "5/4/3/2/1,0/0");
+        assertThat(new Permuter<>("abcdef".chars().mapToObj(ch -> "" + (char) ch))
+                .permute(checkpointManager)
+                .count()).isEqualTo(273);
+    }
 }
