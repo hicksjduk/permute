@@ -24,6 +24,11 @@ public class CheckpointManager
     private SortedMap<Integer, String> currentCheckpoints = new TreeMap<>();
     private final List<String> initStrings;
 
+    CheckpointManager(String... initStrings)
+    {
+        this(null, null, Stream.of(initStrings));
+    }
+
     public CheckpointManager(int outputIntervalInSeconds, String... initStrings)
     {
         this(outputIntervalInSeconds, null, Stream.of(initStrings));
@@ -54,9 +59,18 @@ public class CheckpointManager
     public CheckpointManager(int outputIntervalInSeconds, CheckpointOutputHandler outputHandler,
             Stream<String> initStrings)
     {
+        this(new Integer(outputIntervalInSeconds), outputHandler, initStrings);
+    }
+
+    private CheckpointManager(Integer outputIntervalInSeconds,
+            CheckpointOutputHandler outputHandler, Stream<String> initStrings)
+    {
         this.initStrings = initStrings.collect(Collectors.toList());
-        if (outputIntervalInSeconds > 0)
-            scheduleCheckpointTask(outputIntervalInSeconds, outputHandler);
+        if (outputIntervalInSeconds == null)
+            return;
+        if (outputIntervalInSeconds <= 0)
+            throw new IllegalArgumentException("Output interval must be at least one second");
+        scheduleCheckpointTask(outputIntervalInSeconds, outputHandler);
     }
 
     public int getInitStringCount()
