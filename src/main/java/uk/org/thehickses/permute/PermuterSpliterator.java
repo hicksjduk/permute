@@ -252,7 +252,7 @@ public class PermuterSpliterator implements Spliterator<IntStream>
         if (queueSizes[startIndex] > 1)
             answer = add(answer,
                     () -> multiply(queueSizes[startIndex] - 1,
-                            () -> LongStream
+                            LongStream
                                     .range(2, maxIndex - startIndex)
                                     .reduce(this::multiply)
                                     .orElse(1)));
