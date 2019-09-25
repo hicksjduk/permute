@@ -10,6 +10,8 @@ import java.util.Iterator;
 import java.util.PrimitiveIterator.OfInt;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicLong;
+import java.util.function.LongConsumer;
+import java.util.function.LongSupplier;
 import java.util.stream.Collectors;
 import java.util.stream.IntStream;
 import java.util.stream.LongStream;
@@ -121,11 +123,11 @@ class PermuterSpliteratorTest
         PermuterSpliterator spl = new PermuterSpliterator(maxIndex);
         AtomicLong maxSize = new AtomicLong(
                 LongStream.rangeClosed(2, maxIndex).reduce((a, b) -> a * b).getAsLong());
-        assertThat(spl.estimateSize()).isEqualTo(maxSize.get());
-        spl
-                .forEachRemaining(
-                        x -> assertThat(spl.estimateSize()).isEqualTo(maxSize.decrementAndGet()));
-        assertThat(maxSize.get() == 0);
+        LongSupplier estimator = spl::estimateSize;
+        LongConsumer checker = expected -> assertThat(estimator.getAsLong()).isEqualTo(expected);
+        checker.accept(maxSize.get());
+        StreamSupport.stream(spl, false).mapToLong(x -> maxSize.decrementAndGet()).forEach(checker);
+        assertThat(maxSize.get()).isEqualTo(0);
     }
 
     @Test
@@ -220,8 +222,7 @@ class PermuterSpliteratorTest
     void testWithCheckpointingOneInitStringParallel()
     {
         testWithCheckpointing(true, 2, Stream.of("1,2/0,2/2"),
-                Stream.of("0:1/2/0", "0:", "1:2/1/0", "1:"),
-                Stream.of("102", "120", "201", "210"));
+                Stream.of("0:1/2/0", "0:", "1:2/1/0", "1:"), Stream.of("102", "120", "201", "210"));
     }
 
     @Test
@@ -236,7 +237,6 @@ class PermuterSpliteratorTest
     void testWithCheckpointingTwoInitStringsParallel()
     {
         testWithCheckpointing(true, 2, Stream.of("1,2/0,2/2", "2/1/0"),
-                Stream.of("0:1/2/0", "0:", "1:"),
-                Stream.of("102", "120", "210"));
+                Stream.of("0:1/2/0", "0:", "1:"), Stream.of("102", "120", "210"));
     }
 }

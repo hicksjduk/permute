@@ -5,10 +5,8 @@ import java.util.Deque;
 import java.util.Set;
 import java.util.Spliterator;
 import java.util.function.Consumer;
-import java.util.function.LongBinaryOperator;
 import java.util.function.LongSupplier;
 import java.util.function.Supplier;
-import java.util.function.ToLongBiFunction;
 import java.util.stream.Collectors;
 import java.util.stream.IntStream;
 import java.util.stream.LongStream;
@@ -25,32 +23,35 @@ public class PermuterSpliterator implements Spliterator<IntStream>
     private final IntPartialResultValidator partialResultValidator;
     private final Checkpointer checkpointer;
 
-    private static ToLongBiFunction<Long, LongSupplier> increaserWithMaximum(
-            LongBinaryOperator increaser, LongBinaryOperator inverse, long maximum)
+    private long add(long a, LongSupplier bGetter)
     {
-        return (a, bGetter) -> {
-            if (a >= maximum)
-                return maximum;
-            long b = bGetter.getAsLong();
-            if (b >= maximum)
-                return maximum;
-            return inverse.applyAsLong(maximum, a) < b ? maximum : increaser.applyAsLong(a, b);
-        };
-    }
-
-    private static final ToLongBiFunction<Long, LongSupplier> ADDER = increaserWithMaximum(
-            (a, b) -> a + b, (a, b) -> a - b, Long.MAX_VALUE);
-    private static final ToLongBiFunction<Long, LongSupplier> MULTIPLIER = increaserWithMaximum(
-            (a, b) -> a * b, (a, b) -> a / b, Long.MAX_VALUE);
-
-    private long add(long a, LongSupplier b)
-    {
-        return ADDER.applyAsLong(a, b);
+        long defaultValue = Long.MAX_VALUE;
+        if (a >= defaultValue)
+            return defaultValue;
+        long b = bGetter.getAsLong();
+        if (b >= defaultValue)
+            return defaultValue;
+        if (defaultValue - a < b)
+            return defaultValue;
+        return a + b;
     }
 
     private long multiply(long a, long b)
     {
-        return MULTIPLIER.applyAsLong(a, () -> b);
+        return multiply(a, () -> b);
+    }
+
+    private long multiply(long a, LongSupplier bGetter)
+    {
+        long defaultValue = Long.MAX_VALUE;
+        if (a >= defaultValue || a < 1)
+            return defaultValue;
+        long b = bGetter.getAsLong();
+        if (b >= defaultValue)
+            return defaultValue;
+        if (defaultValue / a < b)
+            return defaultValue;
+        return a * b;
     }
 
     public PermuterSpliterator(int maxIndex)
@@ -249,8 +250,12 @@ public class PermuterSpliterator implements Spliterator<IntStream>
             return queueSizes[startIndex];
         long answer = estimateSize(startIndex + 1, queueSizes);
         if (queueSizes[startIndex] > 1)
-            answer = add(answer, () -> multiply(queueSizes[startIndex] - 1,
-                    LongStream.range(2, maxIndex - startIndex).reduce(this::multiply).orElse(1)));
+            answer = add(answer,
+                    () -> multiply(queueSizes[startIndex] - 1,
+                            () -> LongStream
+                                    .range(2, maxIndex - startIndex)
+                                    .reduce(this::multiply)
+                                    .orElse(1)));
         return answer;
     }
 
